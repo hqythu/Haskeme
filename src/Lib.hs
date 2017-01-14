@@ -4,7 +4,7 @@ module Lib
 
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
-import Control.Monad.Error
+import Control.Monad.Except
 
 import Definition
 import Arithmetic

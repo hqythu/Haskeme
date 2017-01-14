@@ -2,7 +2,7 @@ module Main where
 
 import System.IO
 import System.Environment
-import Control.Monad.Error
+import Control.Monad.Except
 import System.Console.Haskeline
 
 import Definition
@@ -24,7 +24,7 @@ runRepl = runInputT defaultSettings loop
            minput <- getInputLine "Haskeme>>> "
            case minput of
                Nothing -> return ()
-               Just "quit" -> return ()
+               Just ":q" -> return ()
                Just input -> do outputStrLn $ evalString input
                                 loop
 

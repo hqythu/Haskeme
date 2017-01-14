@@ -1,7 +1,7 @@
 module Definition where
 
 import Text.ParserCombinators.Parsec
-import Control.Monad.Error
+import Control.Monad.Except
 
 data SchemeVal 
     = Atom String
@@ -11,17 +11,15 @@ data SchemeVal
     | String String
 
 unwordsList :: [SchemeVal] -> String
-unwordsList = unwords . map showVal
+unwordsList = unwords . map show
 
-showVal :: SchemeVal -> String
-showVal (String str) = "\"" ++ str ++ "\""
-showVal (Atom name) = name
-showVal (Number num) = show num
-showVal (Bool True) = "True"
-showVal (Bool False) = "False"
-showVal (List contents) = "(" ++ unwordsList contents ++ ")"
-
-instance Show SchemeVal where show = showVal
+instance Show SchemeVal where
+    show (String str) = "\"" ++ str ++ "\""
+    show (Atom name) = name
+    show (Number num) = show num
+    show (Bool True) = "True"
+    show (Bool False) = "False"
+    show (List contents) = "(" ++ unwordsList contents ++ ")"
 
 data SchemeError
     = NumArgs Integer [SchemeVal]
@@ -32,21 +30,16 @@ data SchemeError
     | UnboundVar String String
     | Default String
 
-showError :: SchemeError -> String
-showError (UnboundVar message varname)  = message ++ ": " ++ varname
-showError (BadSpecialForm message form) = message ++ ": " ++ show form
-showError (NotFunction message func)    = message ++ ": " ++ show func
-showError (NumArgs expected found)      = "Expected " ++ show expected 
+instance Show SchemeError where
+    -- -- show :: SchemeError -> String
+    show (UnboundVar message varname)  = message ++ ": " ++ varname
+    show (BadSpecialForm message form) = message ++ ": " ++ show form
+    show (NotFunction message func)    = message ++ ": " ++ show func
+    show (NumArgs expected found)      = "Expected " ++ show expected 
                                        ++ " args; found values " ++ unwordsList found
-showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
+    show (TypeMismatch expected found) = "Invalid type: expected " ++ expected
                                        ++ ", found " ++ show found
-showError (Parser parseErr)             = "Parse error at " ++ show parseErr
-
-instance Show SchemeError where show = showError
-
-instance Error SchemeError where
-     noMsg = Default "An error has occurred"
-     strMsg = Default
+    show (Parser parseErr)             = "Parse error at " ++ show parseErr
 
 type ThrowsError = Either SchemeError
 

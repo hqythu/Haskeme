@@ -1,6 +1,6 @@
 module Arithmetic where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Text.ParserCombinators.Parsec
 
 import Definition
