@@ -22,7 +22,23 @@ parseDouble = do
 parseNumber :: Parser SchemeVal
 parseNumber = try parseDouble <|> parseInteger
 
+parseTrue:: Parser SchemeVal
+parseTrue = do
+    x <- string "True"
+    return $ Bool True
+
+parseFalse:: Parser SchemeVal
+parseFalse = do
+    x <- string "False"
+    return $ Bool False
+
+parseBool :: Parser SchemeVal
+parseBool = try parseTrue <|> parseFalse
+
+parseValue = try parseBool <|> parseNumber
+
 parseExpr :: String -> String
-parseExpr input = case parse parseNumber "lisp" input of
+parseExpr input = case parse parseValue "lisp" input of
     Left err -> "No match: " ++ show err
     Right (Number x) -> show x
+    Right (Bool x) -> show x
