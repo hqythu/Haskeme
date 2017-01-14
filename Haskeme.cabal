@@ -15,9 +15,10 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Lib, Definition, Arithmetic, Utils
   build-depends:       base >= 4.7 && < 5
                      , text
+                     , mtl
                      , parsec
   default-language:    Haskell2010
 

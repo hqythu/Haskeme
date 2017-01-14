@@ -6,13 +6,9 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Control.Monad.Error
 
-data SchemeVal 
-    = Atom String
-    | List [SchemeVal]
-    | Bool Bool
-    | Number Double
-    | String String
-
+import Definition
+import Arithmetic
+import Utils
 
 unwordsList :: [SchemeVal] -> String
 unwordsList = unwords . map showVal
@@ -75,27 +71,6 @@ parseExpr = parseAtom
             x <- parseList
             char ')'
             return x
-
-primitives :: [(String, [SchemeVal] -> SchemeVal)]
-primitives = [("+", numericBinop (+)),
-              ("-", numericBinop (-)),
-              ("*", numericBinop (*)),
-              ("/", numericBinop (/))]
-
-apply :: String -> [SchemeVal] -> SchemeVal
-apply func args = maybe (Bool False) ($ args) $ lookup func primitives
-
-numericBinop :: (Double -> Double -> Double) -> [SchemeVal] -> SchemeVal
-numericBinop op params = Number $ foldl1 op $ map unpackNum params
-
-unpackNum :: SchemeVal -> Double
-unpackNum (Number n) = n
-unpackNum (String n) = let parsed = reads n :: [(Double, String)] in 
-                           if null parsed 
-                              then 0
-                              else fst $ parsed !! 0
-unpackNum (List [n]) = unpackNum n
-unpackNum _ = 0
 
 eval :: SchemeVal -> SchemeVal
 eval val@(Atom _) = val
