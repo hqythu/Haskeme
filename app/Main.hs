@@ -1,6 +1,9 @@
 module Main where
 
+import System.Environment
 import Lib
 
 main :: IO ()
-main = someFunc
+main = do 
+    (expr:_) <- getArgs
+    putStrLn (parseExpr expr)
