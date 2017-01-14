@@ -28,4 +28,4 @@ unpackNum (String n) = let parsed = reads n in
                              then throwError $ TypeMismatch "number" $ String n
                              else return $ fst $ parsed !! 0
 unpackNum (List [n]) = unpackNum n
-unpackNum notNum     = throwError $ TypeMismatch "number" notNum
+unpackNum notNum     = throwError $ TypeMismatch "Number" notNum
