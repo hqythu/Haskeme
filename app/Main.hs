@@ -2,6 +2,9 @@ module Main where
 
 import System.IO
 import System.Environment
+import Control.Monad.Error
+
+import Definition
 import Lib
 
 flushStr :: String -> IO ()
@@ -10,11 +13,11 @@ flushStr str = putStr str >> hFlush stdout
 readPrompt :: String -> IO String
 readPrompt prompt = flushStr prompt >> getLine
 
--- evalString :: String -> IO String
--- evalString expr = return $ extractValue $ trapError (liftM show $ readExpr expr >>= eval)
+evalString :: String -> IO String
+evalString expr = return $ extractValue $ trapError (liftM show $ readExpr expr >>= eval)
 
 evalAndPrint :: String -> IO ()
-evalAndPrint expr = (print . eval .readExpr) expr
+evalAndPrint expr =  evalString expr >>= putStrLn
 
 until_ :: Monad m => (a -> Bool) -> m a -> (a -> m ()) -> m ()
 until_ pred prompt action = do 

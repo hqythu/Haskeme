@@ -1,24 +1,31 @@
 module Arithmetic where
 
+import Control.Monad.Error
+import Text.ParserCombinators.Parsec
+
 import Definition
 
-primitives :: [(String, [SchemeVal] -> SchemeVal)]
+primitives :: [(String, [SchemeVal] -> ThrowsError SchemeVal)]
 primitives = [("+", numericBinop (+)),
               ("-", numericBinop (-)),
               ("*", numericBinop (*)),
               ("/", numericBinop (/))]
 
-apply :: String -> [SchemeVal] -> SchemeVal
-apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+apply :: String -> [SchemeVal] -> ThrowsError SchemeVal
+apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func)
+                        ($ args)
+                        (lookup func primitives)
 
-numericBinop :: (Double -> Double -> Double) -> [SchemeVal] -> SchemeVal
-numericBinop op params = Number $ foldl1 op $ map unpackNum params
+numericBinop :: (Double -> Double -> Double) -> [SchemeVal] -> ThrowsError SchemeVal
+numericBinop op           []  = throwError $ NumArgs 2 []
+numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
+numericBinop op params        = mapM unpackNum params >>= return . Number . foldl1 op
 
-unpackNum :: SchemeVal -> Double
-unpackNum (Number n) = n
-unpackNum (String n) = let parsed = reads n :: [(Double, String)] in 
+unpackNum :: SchemeVal -> ThrowsError Double
+unpackNum (Number n) = return n
+unpackNum (String n) = let parsed = reads n in 
                            if null parsed 
-                              then 0
-                              else fst $ parsed !! 0
+                             then throwError $ TypeMismatch "number" $ String n
+                             else return $ fst $ parsed !! 0
 unpackNum (List [n]) = unpackNum n
-unpackNum _ = 0
+unpackNum notNum     = throwError $ TypeMismatch "number" notNum

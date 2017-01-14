@@ -1,5 +1,5 @@
 module Lib
-    ( readExpr, eval
+    ( readExpr, eval, extractValue
     ) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)
@@ -9,19 +9,6 @@ import Control.Monad.Error
 import Definition
 import Arithmetic
 import Utils
-
-unwordsList :: [SchemeVal] -> String
-unwordsList = unwords . map showVal
-
-showVal :: SchemeVal -> String
-showVal (String str) = "\"" ++ str ++ "\""
-showVal (Atom name) = name
-showVal (Number num) = show num
-showVal (Bool True) = "True"
-showVal (Bool False) = "False"
-showVal (List contents) = "(" ++ unwordsList contents ++ ")"
-
-instance Show SchemeVal where show = showVal
 
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
@@ -72,14 +59,18 @@ parseExpr = parseAtom
             char ')'
             return x
 
-eval :: SchemeVal -> SchemeVal
-eval val@(Atom _) = val
-eval val@(String _) = val
-eval val@(Number _) = val
-eval val@(Bool _) = val
-eval (List (Atom func : args)) = apply func $ map eval args
+eval :: SchemeVal -> ThrowsError SchemeVal
+eval val@(Atom _) = return val
+eval val@(String _) = return val
+eval val@(Number _) = return val
+eval val@(Bool _) = return val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-readExpr :: String -> SchemeVal
-readExpr input = case parse parseExpr "lisp" input of
-    Left err -> String $ "No match: " ++ show err
-    Right val -> val
+extractValue :: ThrowsError a -> a
+extractValue (Right val) = val
+
+readExpr :: String -> ThrowsError SchemeVal
+readExpr input = case parse parseExpr "scheme" input of
+     Left err -> throwError $ Parser err
+     Right val -> return val
