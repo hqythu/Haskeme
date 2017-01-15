@@ -5,7 +5,7 @@ import Control.Monad.Except
 import Data.IORef
 
 data SchemeVal 
-    = Atom String
+    = Symbol String
     | List [SchemeVal]
     | Bool Bool
     | Number Double
@@ -18,7 +18,7 @@ unwordsList = unwords . map show
 
 instance Show SchemeVal where
     show (String str) = "\"" ++ str ++ "\""
-    show (Atom name) = name
+    show (Symbol name) = name
     show (Number num) = show num
     show (Bool True) = "True"
     show (Bool False) = "False"
@@ -64,34 +64,40 @@ liftThrows :: ThrowsError a -> IOThrowsError a
 liftThrows (Left err) = throwError err
 liftThrows (Right val) = return val
 
-isBound :: Env -> String -> IO Bool
-isBound envRef var = readIORef envRef >>= return . maybe False (const True) . lookup var
+isDefined :: Env -> String -> IO Bool
+isDefined envRef var = readIORef envRef >>= return . maybe False (const True) . lookup var
 
 getVar :: Env -> String -> IOThrowsError SchemeVal
 getVar envRef var = do
     env <- liftIO $ readIORef envRef
-    maybe (throwError $ UnboundVar "Getting an unbound variable" var)
+    maybe (throwError $ UnboundVar "Getting an undefined variable" var)
         (liftIO . readIORef)
         (lookup var env)
 
 setVar :: Env -> String -> SchemeVal -> IOThrowsError SchemeVal
 setVar envRef var value = do
     env <- liftIO $ readIORef envRef
-    maybe (throwError $ UnboundVar "Setting an unbound variable" var)
+    maybe (throwError $ UnboundVar "Setting an undefined variable" var)
         (liftIO . (flip writeIORef value))
         (lookup var env)
     return value
 
 defineVar :: Env -> String -> SchemeVal -> IOThrowsError SchemeVal
+-- defineVar envRef var value = do
+--      alreadyDefined <- liftIO $ isDefined envRef var
+--      if alreadyDefined
+--         then envRef var value >> return value
+--         else liftIO $ do
+--             valueRef <- newIORef value
+--             env <- readIORef envRef
+--             writeIORef envRef ((var, valueRef) : env)
+--             return value
 defineVar envRef var value = do
-     alreadyDefined <- liftIO $ isBound envRef var
-     if alreadyDefined
-        then setVar envRef var value >> return value
-        else liftIO $ do
-            valueRef <- newIORef value
-            env <- readIORef envRef
-            writeIORef envRef ((var, valueRef) : env)
-            return value
+    liftIO $ do
+        valueRef <- newIORef value
+        env <- readIORef envRef
+        writeIORef envRef ((var, valueRef) : env)
+        return value
 
 bindVars :: Env -> [(String, SchemeVal)] -> IO Env
 bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef

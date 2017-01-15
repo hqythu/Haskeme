@@ -6,7 +6,8 @@ import Control.Monad.Except
 import System.Console.Haskeline
 
 import Definition
-import Lib
+import Parse
+import Eval
 
 evalString :: Env -> String -> IO String
 evalString env expr = runIOThrows $ liftM show $ (liftThrows $ readExpr expr) >>= eval env

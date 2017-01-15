@@ -6,18 +6,18 @@ import Text.ParserCombinators.Parsec
 import Definition
 
 numericBinop :: (Double -> Double -> Double) -> [SchemeVal] -> ThrowsError SchemeVal
-numericBinop op           []  = throwError $ NumArgs 2 []
+numericBinop op [] = throwError $ NumArgs 2 []
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params        = mapM unpackNum params >>= return . Number . foldl1 op
+numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 
 unpackNum :: SchemeVal -> ThrowsError Double
 unpackNum (Number n) = return n
 unpackNum (String n) = let parsed = reads n in 
-                           if null parsed 
-                             then throwError $ TypeMismatch "number" $ String n
-                             else return $ fst $ parsed !! 0
+    if null parsed 
+        then throwError $ TypeMismatch "Number" $ String n
+        else return $ fst $ parsed !! 0
 unpackNum (List [n]) = unpackNum n
-unpackNum notNum     = throwError $ TypeMismatch "Number" notNum
+unpackNum notNum = throwError $ TypeMismatch "Number" notNum
 
 boolBinop :: (SchemeVal -> ThrowsError a) -> (a -> a -> Bool) -> [SchemeVal] -> ThrowsError SchemeVal
 boolBinop unpacker op args =
