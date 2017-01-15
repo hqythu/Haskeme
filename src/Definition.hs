@@ -40,7 +40,6 @@ data SchemeError
     | Default String
 
 instance Show SchemeError where
-    -- -- show :: SchemeError -> String
     show (UnboundVar message varname)  = message ++ ": " ++ varname
     show (BadSpecialForm message form) = message ++ ": " ++ show form
     show (NotFunction message func)    = message ++ ": " ++ show func

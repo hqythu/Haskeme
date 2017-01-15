@@ -110,6 +110,8 @@ eval env (List [Atom "define", Atom var, form]) =
     eval env form >>= defineVar env var
 eval env (List (Atom "define" : List (Atom var : params) : body)) =
     makeNormalFunc env params body >>= defineVar env var
+eval env (List [Atom "let", Atom var, val, expr]) = 
+    eval env val >>= defineVar env var >> eval env expr
 eval env (List (Atom "lambda" : List params : body)) =
     makeNormalFunc env params body
 eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
