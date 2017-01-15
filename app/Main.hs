@@ -14,19 +14,18 @@ evalString env expr = runIOThrows $ liftM show $ (liftThrows $ readExpr expr) >>
 evalAndPrint :: Env -> String -> IO ()
 evalAndPrint env expr = evalString env expr >>= putStrLn
 
--- runRepl :: IO ()
--- runRepl = runInputT defaultSettings loop
---     where
---         loop :: InputT IO ()
---         loop = do
---             minput <- getInputLine "Haskeme>>> "
---             env <- nullEnv
---             case minput of
---                 Nothing -> outputStrLn "EOF detected, program exit"
---                 Just ":q" -> outputStrLn "Program exit"
---                 Just input -> do
---                     (evalString nullEnv input) >>= toInputT >>= outputStrLn
---                     loop
+runRepl :: IO ()
+runRepl = runInputT defaultSettings ((liftIO nullEnv) >>= loop)
+    where
+        loop :: Env -> InputT IO ()
+        loop env = do
+            minput <- getInputLine "Haskeme>>> "
+            case minput of
+                Nothing -> outputStrLn "EOF detected, program exit"
+                Just ":q" -> outputStrLn "Program exit"
+                Just input -> do
+                    (liftIO (evalString env input)) >>= outputStrLn
+                    loop env
 
 flushStr :: String -> IO ()
 flushStr str = putStr str >> hFlush stdout
@@ -40,9 +39,6 @@ until_ pred prompt action = do
    if pred result
       then return ()
       else action result >> until_ pred prompt action
-
-runRepl :: IO ()
-runRepl = nullEnv >>= (until_ (== "quit") (readPrompt "Haskeme>>> ")) . evalAndPrint
 
 runOne :: String -> IO ()
 runOne expr = nullEnv >>= flip evalAndPrint expr
