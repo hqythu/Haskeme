@@ -5,6 +5,7 @@ module Lib
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Control.Monad.Except
+import Data.IORef
 
 import Definition
 import Arithmetic
@@ -54,23 +55,29 @@ parseExpr = parseAtom
     <|> parseString
     <|> parseNumber
     <|> do
-            char '('
-            x <- parseList
-            char ')'
-            return x
+        char '('
+        x <- parseList
+        char ')'
+        return x
 
-eval :: SchemeVal -> ThrowsError SchemeVal
-eval val@(Atom _) = return val
-eval val@(String _) = return val
-eval val@(Number _) = return val
-eval val@(Bool _) = return val
-eval (List [Atom "if", cond, trueExpr, falseExpr]) = do
-    result <- eval cond
+eval :: Env -> SchemeVal -> IOThrowsError SchemeVal
+-- eval env val@(Atom _) = return val
+eval env val@(String _) = return val
+eval env val@(Number _) = return val
+eval env val@(Bool _) = return val
+eval env (Atom id) = getVar env id
+eval env (List [Atom "if", cond, trueExpr, falseExpr]) = do
+    result <- eval env cond
     case result of
-        Bool True -> eval trueExpr
-        otherwise -> eval falseExpr
-eval (List (Atom func : args)) = mapM eval args >>= apply func
-eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+        Bool True -> eval env trueExpr
+        otherwise -> eval env falseExpr
+eval env (List [Atom "set!", Atom var, form]) =
+     eval env form >>= setVar env var
+eval env (List [Atom "define", Atom var, form]) =
+     eval env form >>= defineVar env var
+eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+eval env val@(List _) = return val
+eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val

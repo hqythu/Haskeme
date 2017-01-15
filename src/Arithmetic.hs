@@ -4,6 +4,7 @@ import Control.Monad.Except
 import Text.ParserCombinators.Parsec
 
 import Definition
+import List
 
 primitives :: [(String, [SchemeVal] -> ThrowsError SchemeVal)]
 primitives = [("+", numericBinop (+)),
@@ -17,7 +18,10 @@ primitives = [("+", numericBinop (+)),
               (">=", numBoolBinop (>=)),
               ("not", boolBoolUnop (not)),
               ("and", boolBoolBinop (&&)), 
-              ("or", boolBoolBinop (||))]
+              ("or", boolBoolBinop (||)),
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons)]
 
 apply :: String -> [SchemeVal] -> ThrowsError SchemeVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func)
