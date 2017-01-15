@@ -10,6 +10,8 @@ data SchemeVal
     | Bool Bool
     | Number Double
     | String String
+    | PrimitiveFunc ([SchemeVal] -> ThrowsError SchemeVal)
+    | Func { params :: [String], vararg :: (Maybe String), body :: [SchemeVal], closure :: Env }
 
 unwordsList :: [SchemeVal] -> String
 unwordsList = unwords . map show
@@ -21,6 +23,12 @@ instance Show SchemeVal where
     show (Bool True) = "True"
     show (Bool False) = "False"
     show (List contents) = "(" ++ unwordsList contents ++ ")"
+    show (PrimitiveFunc _) = "<primitive>"
+    show (Func {params = args, vararg = varargs, body = body, closure = env}) =
+        "(lambda (" ++ unwords (map show args) ++
+            (case varargs of
+                Nothing -> ""
+                Just arg -> " . " ++ arg) ++ ") ...)"
 
 data SchemeError
     = NumArgs Integer [SchemeVal]

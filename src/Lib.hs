@@ -1,5 +1,5 @@
 module Lib
-    ( readExpr, eval, extractValue
+    ( readExpr, eval, extractValue, primitiveBindings
     ) where
 
 import Text.ParserCombinators.Parsec hiding (spaces)
@@ -9,13 +9,15 @@ import Data.IORef
 
 import Definition
 import Arithmetic
+import List
+import Func
 import Utils
 
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
-spaces :: Parser ()
-spaces = skipMany1 space
+spaces1 :: Parser ()
+spaces1 = skipMany1 space
 
 parseAtom :: Parser SchemeVal
 parseAtom = do
@@ -48,7 +50,7 @@ parseString = do
     return $ String x
 
 parseList :: Parser SchemeVal
-parseList = liftM List (sepBy parseExpr spaces)
+parseList = liftM List (sepBy parseExpr spaces1)
 
 parseExpr :: Parser SchemeVal
 parseExpr = parseAtom
@@ -59,6 +61,37 @@ parseExpr = parseAtom
         x <- parseList
         char ')'
         return x
+
+primitives :: [(String, [SchemeVal] -> ThrowsError SchemeVal)]
+primitives = [("+", numericBinop (+)),
+              ("-", numericBinop (-)),
+              ("*", numericBinop (*)),
+              ("/", numericBinop (/)),
+              ("=", numBoolBinop (==)),
+              ("<", numBoolBinop (<)),
+              ("<=", numBoolBinop (<=)),
+              (">", numBoolBinop (>)),
+              (">=", numBoolBinop (>=)),
+              ("not", boolBoolUnop (not)),
+              ("and", boolBoolBinop (&&)), 
+              ("or", boolBoolBinop (||)),
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons)]
+
+apply :: SchemeVal -> [SchemeVal] -> IOThrowsError SchemeVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params varargs body closure) args =
+    if num params /= num args && varargs == Nothing
+        then throwError $ NumArgs (num params) args
+        else (liftIO $ bindVars closure $ zip params args) >>= bindVarArgs varargs >>= evalBody
+    where
+        remainingArgs = drop (length params) args
+        num = toInteger . length
+        evalBody env = liftM last $ mapM (eval env) body
+        bindVarArgs arg env = case arg of
+            Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
+            Nothing -> return env
 
 eval :: Env -> SchemeVal -> IOThrowsError SchemeVal
 -- eval env val@(Atom _) = return val
@@ -72,12 +105,21 @@ eval env (List [Atom "if", cond, trueExpr, falseExpr]) = do
         Bool True -> eval env trueExpr
         otherwise -> eval env falseExpr
 eval env (List [Atom "set!", Atom var, form]) =
-     eval env form >>= setVar env var
+    eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) =
-     eval env form >>= defineVar env var
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+    eval env form >>= defineVar env var
+eval env (List (Atom "define" : List (Atom var : params) : body)) =
+    makeNormalFunc env params body >>= defineVar env var
+eval env (List (Atom "lambda" : List params : body)) =
+    makeNormalFunc env params body
+eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
+    makeVarArgs varargs env [] body
+eval env (List (function : args)) = do
+    func <- eval env function
+    argVals <- mapM (eval env) args
+    apply func argVals
 eval env val@(List _) = return val
-eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+eval env badForm = throwError $ BadSpecialForm "Unrecognized form" badForm
 
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
@@ -86,3 +128,7 @@ readExpr :: String -> ThrowsError SchemeVal
 readExpr input = case parse parseExpr "scheme" input of
      Left err -> throwError $ Parser err
      Right val -> return val
+
+primitiveBindings :: IO Env
+primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitives)
+     where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)

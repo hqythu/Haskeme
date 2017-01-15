@@ -15,7 +15,7 @@ evalAndPrint :: Env -> String -> IO ()
 evalAndPrint env expr = evalString env expr >>= putStrLn
 
 runRepl :: IO ()
-runRepl = runInputT defaultSettings ((liftIO nullEnv) >>= loop)
+runRepl = runInputT defaultSettings ((liftIO primitiveBindings) >>= loop)
     where
         loop :: Env -> InputT IO ()
         loop env = do
@@ -27,21 +27,8 @@ runRepl = runInputT defaultSettings ((liftIO nullEnv) >>= loop)
                     (liftIO (evalString env input)) >>= outputStrLn
                     loop env
 
-flushStr :: String -> IO ()
-flushStr str = putStr str >> hFlush stdout
-
-readPrompt :: String -> IO String
-readPrompt prompt = flushStr prompt >> getLine
-
-until_ :: Monad m => (a -> Bool) -> m a -> (a -> m ()) -> m ()
-until_ pred prompt action = do
-   result <- prompt
-   if pred result
-      then return ()
-      else action result >> until_ pred prompt action
-
 runOne :: String -> IO ()
-runOne expr = nullEnv >>= flip evalAndPrint expr
+runOne expr = primitiveBindings >>= flip evalAndPrint expr
 
 runIOThrows :: IOThrowsError String -> IO String
 runIOThrows action = runExceptT (trapError action) >>= return . extractValue
